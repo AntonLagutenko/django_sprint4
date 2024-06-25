@@ -1,8 +1,8 @@
 from django.shortcuts import render
 
 
-def csrf_error(request, reason=""):
-    return render(request, 'pages/403.html', status=403)
+def csrf_failure(request, reason=''):
+    return render(request, 'pages/403csrf.html', status=403) 
 
 
 def custom_403_view(request, exception=None):

@@ -31,7 +31,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'blog.apps.BlogConfig',
     'pages.apps.PagesConfig',
-    'django_bootstrap5'
+    'django_bootstrap5',
+    'core'
 ]
 
 MIDDLEWARE = [
@@ -64,7 +65,7 @@ TEMPLATES = [
     },
 ]
 
-CSRF_FAILURE_VIEW = 'core.views.csrf_error'
+CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
 
 handler403 = 'pages.views.custom_403_view'
@@ -115,3 +116,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MAX_FIELD_LENGTH = 256
 REPRESENTATION_LENGTH = 20
 AMOUNT_POSTS = 10
+EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'

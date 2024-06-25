@@ -8,8 +8,14 @@ DEBUG = True
 
 
 LOGIN_REDIRECT_URL = 'blog:index'
+
 # адрес перенаправления после логина (blog:index  - главная страница)
                                #(namespace:name)
+
+LOGIN_URL = 'login '
+
+MEDIA_ROOT = BASE_DIR / 'media/'
+MEDIA_URL = 'media/'
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -108,4 +114,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MAX_FIELD_LENGTH = 256
 REPRESENTATION_LENGTH = 20
-AMOUNT_POSTS = 5
+AMOUNT_POSTS = 10

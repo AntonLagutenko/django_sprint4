@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.utils import timezone
 
 
 User = get_user_model()
@@ -56,9 +57,11 @@ class Post(BaseBlogModel):
     text = models.TextField("Текст")
     pub_date = models.DateTimeField(
         "Дата и время публикации",
+        default=timezone.now,
         help_text=('Если установить дату и время в будущем — '
                    'можно делать отложенные публикации.')
     )
+    image = models.ImageField(verbose_name='Картинка у публикации', blank=True)
 
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="Автор публикации"
@@ -85,3 +88,27 @@ class Post(BaseBlogModel):
 
     def __str__(self):
         return self.title[: settings.REPRESENTATION_LENGTH]
+
+
+class Comment(BaseBlogModel):
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор комментария',
+        related_name='comments'
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        verbose_name='Комментируемый пост',
+        related_name='comments'
+    )
+    text = models.TextField(verbose_name='Текст комментария')
+
+    class Meta:
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ('created_at',)
+
+    def __str__(self) -> str:
+        return self.text[30]

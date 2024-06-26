@@ -99,13 +99,13 @@ class Comment(BaseBlogModel):
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор комментария',
-        related_name='user_comments'  # Изменено с 'comments' на 'user_comments'
+        related_name='user_comments'
     )
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
         verbose_name='Комментируемый пост',
-        related_name='post_comments'  # Изменено с 'comments' на 'post_comments'
+        related_name='post_comments'
     )
     text = models.TextField(verbose_name='Текст комментария')
 
@@ -115,4 +115,4 @@ class Comment(BaseBlogModel):
         ordering = ['created_at',]
 
     def __str__(self) -> str:
-        return self.text[:30]  # Исправлено с [30] на [:30]
+        return self.text[:30]

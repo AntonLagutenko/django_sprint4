@@ -11,13 +11,15 @@ from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
 from django.db.models import Count
 
+
 class PostCreateView(LoginRequiredMixin, CreateView):
     """Создание поста."""
 
     model = Post
     fields = '__all__'
     template_name = 'blog/create.html'
-    login_url = settings.LOGIN_URL  # URL для перенаправления при неавторизованном доступе
+    # URL для перенаправления при неавторизованном доступе
+    login_url = settings.LOGIN_URL
     redirect_field_name = 'redirect_to'
 
     def form_valid(self, form):
@@ -25,10 +27,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
             form.instance.author = self.request.user
             return super().form_valid(form)
         else:
-            # Здесь вы можете перенаправить на страницу входа
-            # или вернуть соответствующий HTTP-ответ
             return HttpResponseRedirect(settings.LOGIN_URL)
-       
 
     def get_success_url(self):
         return reverse_lazy('blog:profile', kwargs={'username': self.object.author.username})
@@ -86,7 +85,7 @@ class UserProfileView(DetailView):
     def get_object(self, queryset=None):
         username = self.kwargs.get('username')
         return get_object_or_404(self.model, username=username)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         posts_list = Post.objects.filter(
@@ -94,7 +93,7 @@ class UserProfileView(DetailView):
         ).annotate(
             comment_count=Count('post_comments')
         ).order_by('-pub_date')
-        
+
         paginator = Paginator(posts_list, settings.AMOUNT_POSTS)
         page = self.request.GET.get('page')
         context['page_obj'] = paginator.get_page(page)
@@ -108,17 +107,17 @@ def get_published_posts():
         is_published=True, pub_date__lt=now(), category__is_published=True
     )
 
+
 def index(request):
     post_db = get_published_posts()[:settings.AMOUNT_POSTS]
     for post in post_db:
-        # Используйте метод comments_count, который вы определили в модели Post
         post.comment_count = post.comments_count()
     return render(request, "blog/index.html", {"page_obj": post_db})
 
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    comments = post.post_comments.all().order_by('created_at')  # Изменено с 'comments' на 'post_comments'
+    comments = post.post_comments.all().order_by('created_at')
     if request.method == 'POST':
         form = CommentForm(request.POST)
         if form.is_valid():
@@ -137,9 +136,11 @@ def post_detail(request, post_id):
 
 
 def category_posts(request, category_slug):
-    category = get_object_or_404(Category, slug=category_slug, is_published=True)
+    category = get_object_or_404(
+        Category, slug=category_slug, is_published=True)
     post_list = get_published_posts().filter(category=category)
-    paginator = Paginator(post_list, 10)  # Показывать по 10 публикаций на странице
+    # Показывать по 10 публикаций на странице
+    paginator = Paginator(post_list, 10)
     page = request.GET.get('page')
     page_obj = paginator.get_page(page)
     return render(request, "blog/category.html", {"category": category, "page_obj": page_obj})
@@ -168,7 +169,7 @@ class DeleteCommentView(DeleteView):
 class AddCommentView(LoginRequiredMixin, CreateView):
     model = Comment
     form_class = CommentForm
-    template_name = 'includes:comments.html'  # Укажите здесь имя вашего шаблона
+    template_name = 'includes:comments.html'
 
     def get_success_url(self):
         post_id = self.kwargs['post_id']

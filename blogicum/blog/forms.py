@@ -9,7 +9,6 @@ class PostForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(PostForm, self).__init__(*args, **kwargs)
-        # Установка текущей даты и времени как начального значения для поля pub_date
         self.fields['pub_date'].initial = timezone.now()
 
     class Meta:

@@ -86,7 +86,6 @@ class Post(BaseBlogModel):
         default_related_name = "posts"
         ordering = ("-pub_date",)
 
-
     def comments_count(self):
         return self.post_comments.count()
 

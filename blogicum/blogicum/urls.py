@@ -23,6 +23,6 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT,)
 
-handler404 = 'core.views.custom_404_view' 
-handler500 = 'core.views.custom_500_view' 
-handler403 = 'core.views.custom_403_view'
+handler404 = 'pages.views.custom_404_view' 
+handler500 = 'pages.views.custom_500_view' 
+handler403 = 'pages.views.custom_403_view' 

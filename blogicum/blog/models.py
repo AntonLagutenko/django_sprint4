@@ -86,6 +86,10 @@ class Post(BaseBlogModel):
         default_related_name = "posts"
         ordering = ("-pub_date",)
 
+
+    def comments_count(self):
+        return self.post_comments.count()
+
     def __str__(self):
         return self.title[: settings.REPRESENTATION_LENGTH]
 
@@ -95,20 +99,20 @@ class Comment(BaseBlogModel):
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор комментария',
-        related_name='comments'
+        related_name='user_comments'  # Изменено с 'comments' на 'user_comments'
     )
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
         verbose_name='Комментируемый пост',
-        related_name='comments'
+        related_name='post_comments'  # Изменено с 'comments' на 'post_comments'
     )
     text = models.TextField(verbose_name='Текст комментария')
 
     class Meta:
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
-        ordering = ('created_at',)
+        ordering = ['created_at',]
 
     def __str__(self) -> str:
-        return self.text[30]
+        return self.text[:30]  # Исправлено с [30] на [:30]

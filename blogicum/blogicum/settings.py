@@ -12,7 +12,7 @@ LOGIN_REDIRECT_URL = 'blog:index'
 # адрес перенаправления после логина (blog:index  - главная страница)
                                #(namespace:name)
 
-LOGIN_URL = 'login '
+LOGIN_URL = 'login'
 
 MEDIA_ROOT = BASE_DIR / 'media/'
 MEDIA_URL = 'media/'
@@ -65,12 +65,12 @@ TEMPLATES = [
     },
 ]
 
-CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
+CSRF_FAILURE_VIEW = 'pages.views.csrf_failure'
 
 
 handler403 = 'pages.views.custom_403_view'
 handler404 = 'pages.views.custom_404_view'
-
+handler500 = 'pages.views.custom_500_view' 
 
 WSGI_APPLICATION = 'blogicum.wsgi.application'
 

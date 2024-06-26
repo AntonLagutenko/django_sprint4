@@ -13,9 +13,9 @@
       <div class="card" style="width: 40rem;">
         <div class="card-header">
           {% if '/edit_comment/' in request.path %}
-            Редактирование комментария
+            <a href="{% url 'blog:edit_comment' post_id=comment.post_id comment_id=comment.id %}">Редактирование комментария</a>
           {% else %}
-            Удаление комментария
+            <a href="{% url 'blog:delete_comment' post_id=comment.post_id comment_id=comment.id %}">Удаление комментария</a>
           {% endif %}
         </div>
         <div class="card-body">

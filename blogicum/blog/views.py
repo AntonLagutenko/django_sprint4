@@ -17,7 +17,8 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     """Создание поста."""
 
     model = Post
-    fields = '__all__'
+    fields = ('title', 'text', 'image', 'location',
+              'category', 'pub_date')
     template_name = 'blog/create.html'
     # URL для перенаправления при неавторизованном доступе
     login_url = settings.LOGIN_URL
@@ -63,7 +64,7 @@ class DeletePostView(DeleteView):
 class EditProfileView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = User
     form_class = UserProfileForm
-    template_name = 'blog/profile.html'
+    template_name = 'blog/user.html'
     success_url = reverse_lazy('blog:profile')
 
     def get_object(self):

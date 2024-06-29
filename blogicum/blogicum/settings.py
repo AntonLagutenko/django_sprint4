@@ -4,7 +4,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-swnb+1to0_o-drj)*kb+i7!z#ns64t)!4r9rb8cgc@q&2kc6a8'
 
-DEBUG = True
+DEBUG = False
 
 
 LOGIN_REDIRECT_URL = 'blog:index'
@@ -65,9 +65,9 @@ TEMPLATES = [
 CSRF_FAILURE_VIEW = 'pages.views.csrf_failure'
 
 
-handler403 = 'pages.views.custom_403_view'
-handler404 = 'pages.views.custom_404_view'
-handler500 = 'pages.views.custom_500_view'
+handler403 = 'pages.views.Custom403View'
+handler404 = 'pages.views.Custom404View'
+handler500 = 'pages.views.Custom500View'
 
 WSGI_APPLICATION = 'blogicum.wsgi.application'
 

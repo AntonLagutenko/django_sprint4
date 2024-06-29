@@ -5,8 +5,6 @@ from .models import Post, Comment, User
 
 
 class PostForm(forms.ModelForm):
-    """Форма публикации."""
-
     def __init__(self, *args, **kwargs):
         super(PostForm, self).__init__(*args, **kwargs)
         self.fields['pub_date'].initial = timezone.now()

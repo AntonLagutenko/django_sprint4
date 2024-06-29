@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.urls import path, include, reverse_lazy
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic.edit import CreateView
+from pages.views import Custom403View, Custom404View
+from pages.views import custom_500
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,6 +26,7 @@ if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL,
                           document_root=settings.MEDIA_ROOT,)
 
-handler404 = 'pages.views.custom_404_view'
-handler500 = 'pages.views.custom_500_view'
-handler403 = 'pages.views.custom_403_view'
+handler404 = Custom404View.as_view()
+# handler500 = 'pages.views.Custom500View.as_view()'
+handler403 = Custom403View.as_view()
+handler500 = 'pages.views.custom_500'

@@ -9,8 +9,9 @@ from .forms import (
     PostForm, UserProfileForm, EditCommentForm, DeleteCommentForm, CommentForm
 )
 from django.core.paginator import Paginator
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponseNotAllowed
 from django.db.models import Count
+from django.http import Http404
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -44,6 +45,17 @@ class EditPostView(UpdateView):
     form_class = PostForm
     template_name = 'blog/create.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        # Проверяем, авторизован ли пользователь
+        if not request.user.is_authenticated:
+            return redirect(settings.LOGIN_URL)
+        # Получаем объект поста
+        post = self.get_object()
+        # Проверяем, является ли текущий пользователь автором поста
+        if post.author != request.user:
+            return redirect('blog:post_detail', post_id=post.pk)
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
         return reverse_lazy('blog:post_detail',
                             kwargs={'post_id': self.object.pk})
@@ -55,6 +67,15 @@ class DeletePostView(DeleteView):
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            post = self.get_object()
+        except Post.DoesNotExist:
+            raise Http404("Публикация не найдена.")
+        if post.author != request.user and not request.user.is_staff:
+            return redirect('blog:post_detail', post_id=post.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse_lazy('blog:profile',
@@ -123,6 +144,9 @@ def index(request):
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
+    if not post.is_published and post.author != request.user and not request.user.is_staff:
+        return redirect('pages:custom_404')
+
     comments = post.post_comments.all().order_by('created_at')
     if request.method == 'POST':
         form = CommentForm(request.POST)
@@ -133,6 +157,7 @@ def post_detail(request, post_id):
             return redirect('post_detail', post_id=post_id)
     else:
         form = CommentForm()
+
     context = {
         'post': post,
         'comments': comments,
@@ -180,17 +205,23 @@ class AddCommentView(LoginRequiredMixin, CreateView):
     model = Comment
     form_class = CommentForm
     template_name = 'includes:comments.html'
+    post = None
+
+    def dispatch(self, request, *args, **kwargs):
+        post_id = kwargs.get('post_id')
+        self.post = get_object_or_404(Post, pk=post_id)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        post_id = self.kwargs['post_id']
-        return reverse_lazy('blog:post_detail', kwargs={'post_id': post_id})
+        return reverse_lazy('blog:post_detail', kwargs={'post_id': self.post.pk})
 
     def form_valid(self, form):
-        form.instance.post_id = self.kwargs['post_id']
+        form.instance.post = self.post
         form.instance.author = self.request.user
         return super().form_valid(form)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['post'] = get_object_or_404(Post, pk=self.kwargs['post_id'])
-        return context
+    def http_method_not_allowed(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(['GET'])  # Define the allowed HTTP methods
+
+    def post(self, request, *args, **kwargs):
+        return self.http_method_not_allowed(request, *args, **kwargs)

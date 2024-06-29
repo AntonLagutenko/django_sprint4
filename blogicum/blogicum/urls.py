@@ -5,7 +5,6 @@ from django.urls import path, include, reverse_lazy
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic.edit import CreateView
 from pages.views import Custom403View, Custom404View
-from pages.views import custom_500
 
 urlpatterns = [
     path('admin/', admin.site.urls),

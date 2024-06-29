@@ -144,7 +144,9 @@ def index(request):
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    if not post.is_published and post.author != request.user and not request.user.is_staff:
+    if not (post.is_published
+            and post.author != request.user
+            and not request.user.is_staff):
         return redirect('pages:custom_404')
 
     comments = post.post_comments.all().order_by('created_at')
@@ -213,7 +215,8 @@ class AddCommentView(LoginRequiredMixin, CreateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse_lazy('blog:post_detail', kwargs={'post_id': self.post.pk})
+        return reverse_lazy('blog:post_detail',
+                            kwargs={'post_id': self.post.pk})
 
     def form_valid(self, form):
         form.instance.post = self.post
@@ -221,7 +224,7 @@ class AddCommentView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def http_method_not_allowed(self, request, *args, **kwargs):
-        return HttpResponseNotAllowed(['GET'])  # Define the allowed HTTP methods
+        return HttpResponseNotAllowed(['GET'])
 
     def post(self, request, *args, **kwargs):
         return self.http_method_not_allowed(request, *args, **kwargs)

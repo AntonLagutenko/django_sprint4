@@ -71,7 +71,9 @@ class DeletePostView(DeleteView):
         return super().delete(request, *args, **kwargs)
 
     def handle_no_permission(self):
-        return self.render_to_response({'error': 'Публикация не найдена или у вас нет прав на её удаление'}, status=404)
+        return self.render_to_response(
+            {'error': 'Публикация не найдена или нет прав на её удаление'},
+            status=404)
 
     def get_success_url(self):
         return reverse_lazy('blog:profile',

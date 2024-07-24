@@ -4,7 +4,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-swnb+1to0_o-drj)*kb+i7!z#ns64t)!4r9rb8cgc@q&2kc6a8'
 
-DEBUG = False
+DEBUG = True
 
 
 LOGIN_REDIRECT_URL = 'blog:index'

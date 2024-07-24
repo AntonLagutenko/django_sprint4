@@ -10,7 +10,6 @@ from .forms import (
 )
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.utils import timezone
 from django.http import Http404
 
 
@@ -63,6 +62,16 @@ class DeletePostView(DeleteView):
         if post.author != self.request.user and not self.request.user.is_staff:
             raise Http404("У вас нет прав на удаление этого поста")
         return post
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            self.object = self.get_object()
+        except Http404:
+            return self.handle_no_permission()
+        return super().delete(request, *args, **kwargs)
+
+    def handle_no_permission(self):
+        return self.render_to_response({'error': 'Публикация не найдена или у вас нет прав на её удаление'}, status=404)
 
     def get_success_url(self):
         return reverse_lazy('blog:profile',
@@ -131,10 +140,7 @@ def index(request):
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    if (
-        post.is_published and post.category.is_published
-        and post.pub_date < timezone.now()
-    ):
+    if post.category.is_published or post.author == request.user:
         comments = post.post_comments.all().order_by('created_at')
         if request.method == 'POST':
             form = CommentForm(request.POST)
@@ -152,7 +158,7 @@ def post_detail(request, post_id):
         }
         return render(request, 'blog/detail.html', context)
     else:
-        return redirect('pages:custom_404')
+        raise Http404("Post not found")
 
 
 def category_posts(request, category_slug):
@@ -170,9 +176,14 @@ def category_posts(request, category_slug):
 
 class EditCommentView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Comment
-    fields = ['content']
+    fields = ['text']
     template_name = 'blog/comment.html'
     pk_url_kwarg = 'comment_id'
+
+    def get_success_url(self):
+        comment = self.get_object()
+        return reverse_lazy('blog:post_detail',
+                            kwargs={'post_id': comment.post.pk})
 
     def get_object(self):
         comment_id = self.kwargs.get('comment_id')
@@ -232,18 +243,27 @@ class AddCommentView(LoginRequiredMixin, CreateView):
     template_name = 'blog/comment.html'
     post_obj = None
 
+    def get_post(self):
+        post_id = self.kwargs.get('post_id')
+        return Post.objects.filter(pk=post_id).first()
+
     def dispatch(self, request, *args, **kwargs):
-        post_id = kwargs.get('post_id')
-        self.post_obj = get_object_or_404(Post, pk=post_id)
+        self.post_obj = self.get_post()
         if not self.post_obj:
             raise Http404("Пост не найден")
         return super().dispatch(request, *args, **kwargs)
 
-    def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.post_obj.pk})
+    def post(self, request, *args, **kwargs):
+        self.post_obj = self.get_post()
+        if not self.post_obj:
+            raise Http404("Пост не найден")
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.instance.post = self.post_obj
         form.instance.author = self.request.user
         return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('blog:post_detail',
+                            kwargs={'post_id': self.post_obj.pk})

@@ -1,10 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.timezone import now
+from django.utils import timezone
 from django.urls import reverse_lazy
 from django.conf import settings
 from .models import Category, Post, Comment, User
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_required
 from .forms import (
     PostForm, UserProfileForm, CommentForm
 )
@@ -14,8 +16,6 @@ from django.http import Http404
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
-    """Создание поста."""
-
     model = Post
     fields = ('title', 'text', 'image', 'location',
               'category', 'pub_date')
@@ -33,7 +33,6 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 
 class EditPostView(UpdateView):
-
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
@@ -140,34 +139,37 @@ def index(request):
     return render(request, "blog/index.html", {"page_obj": post_db})
 
 
+@login_required
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    if post.category.is_published or post.author == request.user:
-        comments = post.post_comments.all().order_by('created_at')
-        if request.method == 'POST':
-            form = CommentForm(request.POST)
-            if form.is_valid():
-                text = form.cleaned_data['text']
-                comment = Comment(author=request.user, post=post, text=text)
-                comment.save()
-                return redirect('post_detail', post_id=post_id)
-        else:
-            form = CommentForm()
-        context = {
-            'post': post,
-            'comments': comments,
-            'form': form
-        }
-        return render(request, 'blog/detail.html', context)
-    else:
+    if (not post.is_published
+            or not post.category.is_published
+            or post.pub_date > timezone.now()) and post.author != request.user:
         raise Http404("Post not found")
+    comments = post.post_comments.all().order_by('created_at')
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            text = form.cleaned_data['text']
+            comment = Comment(author=request.user, post=post, text=text)
+            comment.save()
+            return redirect('post_detail', post_id=post_id)
+    else:
+        form = CommentForm()
+    context = {
+        'post': post,
+        'comments': comments,
+        'form': form
+    }
+    return render(request, 'blog/detail.html', context)
 
 
 def category_posts(request, category_slug):
     category = get_object_or_404(
         Category, slug=category_slug, is_published=True)
+    if not category.is_published:
+        raise Http404("Post not found")
     post_list = get_published_posts().filter(category=category)
-    # Показывать по 10 публикаций на странице
     paginator = Paginator(post_list, 10)
     page = request.GET.get('page')
     page_obj = paginator.get_page(page)
@@ -245,21 +247,12 @@ class AddCommentView(LoginRequiredMixin, CreateView):
     template_name = 'blog/comment.html'
     post_obj = None
 
-    def get_post(self):
-        post_id = self.kwargs.get('post_id')
-        return Post.objects.filter(pk=post_id).first()
-
     def dispatch(self, request, *args, **kwargs):
-        self.post_obj = self.get_post()
-        if not self.post_obj:
-            raise Http404("Пост не найден")
+        try:
+            self.post_obj = Post.objects.get(pk=self.kwargs.get('post_id'))
+        except Post.DoesNotExist:
+            return render(request, 'pages/404.html', status=404)
         return super().dispatch(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        self.post_obj = self.get_post()
-        if not self.post_obj:
-            raise Http404("Пост не найден")
-        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.instance.post = self.post_obj

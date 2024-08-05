@@ -1,13 +1,17 @@
-from django.conf import settings
+from constants.my_constants import (
+    REPRESENTATION_LENGTH,
+    MAX_FIELD_LENGTH,
+    MAX_COMMENT_LENGTH
+)
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
 
-
 User = get_user_model()
 
 
-class BaseBlogModel(models.Model):
+class BasePublication(models.Model):
     is_published = models.BooleanField(
         "Опубликовано",
         default=True,
@@ -20,20 +24,20 @@ class BaseBlogModel(models.Model):
         ordering = ("created_at",)
 
 
-class Location(BaseBlogModel):
+class Location(BasePublication):
     name = models.CharField(
-        "Название места", max_length=settings.MAX_FIELD_LENGTH)
+        "Название места", max_length=MAX_FIELD_LENGTH)
 
-    class Meta(BaseBlogModel.Meta):
+    class Meta(BasePublication.Meta):
         verbose_name = "местоположение"
         verbose_name_plural = "Местоположения"
 
     def __str__(self):
-        return self.name[: settings.REPRESENTATION_LENGTH]
+        return self.name[:REPRESENTATION_LENGTH]
 
 
-class Category(BaseBlogModel):
-    title = models.CharField("Заголовок", max_length=settings.MAX_FIELD_LENGTH)
+class Category(BasePublication):
+    title = models.CharField("Заголовок", max_length=MAX_FIELD_LENGTH)
     description = models.TextField("Описание")
     slug = models.SlugField(
         "Идентификатор",
@@ -44,16 +48,16 @@ class Category(BaseBlogModel):
         unique=True,
     )
 
-    class Meta(BaseBlogModel.Meta):
+    class Meta(BasePublication.Meta):
         verbose_name = "категория"
         verbose_name_plural = "Категории"
 
     def __str__(self):
-        return self.title[: settings.REPRESENTATION_LENGTH]
+        return self.title[:REPRESENTATION_LENGTH]
 
 
-class Post(BaseBlogModel):
-    title = models.CharField("Заголовок", max_length=settings.MAX_FIELD_LENGTH)
+class Post(BasePublication):
+    title = models.CharField("Заголовок", max_length=MAX_FIELD_LENGTH)
     text = models.TextField("Текст")
     pub_date = models.DateTimeField(
         "Дата и время публикации",
@@ -80,7 +84,7 @@ class Post(BaseBlogModel):
         null=True, on_delete=models.SET_NULL, verbose_name="Категория"
     )
 
-    class Meta(BaseBlogModel.Meta):
+    class Meta():
         verbose_name = "публикация"
         verbose_name_plural = "Публикации"
         default_related_name = "posts"
@@ -90,10 +94,10 @@ class Post(BaseBlogModel):
         return self.post_comments.count()
 
     def __str__(self):
-        return self.title[: settings.REPRESENTATION_LENGTH]
+        return self.title[:REPRESENTATION_LENGTH]
 
 
-class Comment(BaseBlogModel):
+class Comment(BasePublication):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -114,4 +118,4 @@ class Comment(BaseBlogModel):
         ordering = ['created_at']
 
     def __str__(self) -> str:
-        return self.text[:30]
+        return self.text[:MAX_COMMENT_LENGTH]

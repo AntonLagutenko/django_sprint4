@@ -13,6 +13,7 @@ from .forms import (
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import Http404
+from constants.my_constants import AMOUNT_POSTS
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -118,7 +119,7 @@ class UserProfileView(DetailView):
             comment_count=Count('post_comments')
         ).order_by('-pub_date')
 
-        paginator = Paginator(posts_list, settings.AMOUNT_POSTS)
+        paginator = Paginator(posts_list, AMOUNT_POSTS)
         page = self.request.GET.get('page')
         context['page_obj'] = paginator.get_page(page)
         return context
@@ -133,7 +134,7 @@ def get_published_posts():
 
 
 def index(request):
-    post_db = get_published_posts()[:settings.AMOUNT_POSTS]
+    post_db = get_published_posts()[:AMOUNT_POSTS]
     for post in post_db:
         post.comment_count = post.comments_count()
     return render(request, "blog/index.html", {"page_obj": post_db})

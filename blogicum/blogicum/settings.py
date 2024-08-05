@@ -29,7 +29,8 @@ INSTALLED_APPS = [
     'blog.apps.BlogConfig',
     'pages.apps.PagesConfig',
     'django_bootstrap5',
-    'core'
+    'core',
+    'constants'
 ]
 
 MIDDLEWARE = [
@@ -110,7 +111,4 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MAX_FIELD_LENGTH = 256
-REPRESENTATION_LENGTH = 20
-AMOUNT_POSTS = 10
 EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'

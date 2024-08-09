@@ -1,17 +1,17 @@
-from constants.my_constants import (
+from django.contrib.auth import get_user_model
+from django.db import models
+from django.utils import timezone
+
+from constants.constants import (
     REPRESENTATION_LENGTH,
     MAX_FIELD_LENGTH,
     MAX_COMMENT_LENGTH
 )
 
-from django.contrib.auth import get_user_model
-from django.db import models
-from django.utils import timezone
-
 User = get_user_model()
 
 
-class BasePublication(models.Model):
+class Publication(models.Model):
     is_published = models.BooleanField(
         "Опубликовано",
         default=True,
@@ -24,11 +24,11 @@ class BasePublication(models.Model):
         ordering = ("created_at",)
 
 
-class Location(BasePublication):
+class Location(Publication):
     name = models.CharField(
         "Название места", max_length=MAX_FIELD_LENGTH)
 
-    class Meta(BasePublication.Meta):
+    class Meta(Publication.Meta):
         verbose_name = "местоположение"
         verbose_name_plural = "Местоположения"
 
@@ -36,7 +36,7 @@ class Location(BasePublication):
         return self.name[:REPRESENTATION_LENGTH]
 
 
-class Category(BasePublication):
+class Category(Publication):
     title = models.CharField("Заголовок", max_length=MAX_FIELD_LENGTH)
     description = models.TextField("Описание")
     slug = models.SlugField(
@@ -48,7 +48,7 @@ class Category(BasePublication):
         unique=True,
     )
 
-    class Meta(BasePublication.Meta):
+    class Meta(Publication.Meta):
         verbose_name = "категория"
         verbose_name_plural = "Категории"
 
@@ -56,7 +56,7 @@ class Category(BasePublication):
         return self.title[:REPRESENTATION_LENGTH]
 
 
-class Post(BasePublication):
+class Post(Publication):
     title = models.CharField("Заголовок", max_length=MAX_FIELD_LENGTH)
     text = models.TextField("Текст")
     pub_date = models.DateTimeField(
@@ -84,25 +84,22 @@ class Post(BasePublication):
         null=True, on_delete=models.SET_NULL, verbose_name="Категория"
     )
 
-    class Meta():
+    class Meta:
         verbose_name = "публикация"
         verbose_name_plural = "Публикации"
         default_related_name = "posts"
         ordering = ("-pub_date",)
 
-    def comments_count(self):
-        return self.post_comments.count()
-
     def __str__(self):
         return self.title[:REPRESENTATION_LENGTH]
 
 
-class Comment(BasePublication):
+class Comment(Publication):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор комментария',
-        related_name='user_comments'
+        related_name='comments'
     )
     post = models.ForeignKey(
         Post,
@@ -118,4 +115,7 @@ class Comment(BasePublication):
         ordering = ['created_at']
 
     def __str__(self) -> str:
-        return self.text[:MAX_COMMENT_LENGTH]
+        return (f'Комментарий автора {self.author.username}'
+                'к посту {self.post.title},'
+                'текст: {self.text[:MAX_COMMENT_LENGTH]}'
+                )

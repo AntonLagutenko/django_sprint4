@@ -1,55 +1,57 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.utils.timezone import now
-from django.utils import timezone
-from django.urls import reverse_lazy
-from django.conf import settings
-from .models import Category, Post, Comment, User
-from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from constants.constants import AMOUNT_POSTS
 from django.contrib.auth.decorators import login_required
-from .forms import (
-    PostForm, UserProfileForm, CommentForm
-)
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import Http404
-from constants.my_constants import AMOUNT_POSTS
+from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse_lazy, reverse
+from django.utils import timezone
+from django.utils.timezone import now
+from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
+
+from .forms import (
+    CommentForm, PostForm, UserProfileForm
+)
+from .models import Category, Comment, Post, User
+
+
+class AuthorRequiredMixin:
+    def dispatch(self, request, *args, **kwargs):
+        post = self.get_object()
+        if post.author != request.user:
+            return redirect('blog:post_detail', post_id=post.pk)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
-    fields = ('title', 'text', 'image', 'location',
-              'category', 'pub_date')
+    form_class = PostForm
     template_name = 'blog/create.html'
-    login_url = settings.LOGIN_URL
-    redirect_field_name = 'redirect_to'
 
     def get_success_url(self):
-        return reverse_lazy('blog:profile',
-                            kwargs={'username': self.object.author.username})
+        return reverse('blog:profile',
+                       args=(self.object.author.username,))
 
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
 
 
-class EditPostView(UpdateView):
+class EditPostView(AuthorRequiredMixin, LoginRequiredMixin, UpdateView):
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
     template_name = 'blog/create.html'
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect(settings.LOGIN_URL)
         post = self.get_object()
         if post.author != request.user:
             return redirect('blog:post_detail', post_id=post.pk)
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.object.pk})
+        return reverse('blog:post_detail', args=(self.object.pk,))
 
 
 class DeletePostView(DeleteView):
@@ -134,9 +136,11 @@ def get_published_posts():
 
 
 def index(request):
-    post_db = get_published_posts()[:AMOUNT_POSTS]
+    post_db = get_published_posts().annotate(
+        comments_count=Count('post_comments')
+    ).order_by('-pub_date')[:AMOUNT_POSTS]
     for post in post_db:
-        post.comment_count = post.comments_count()
+        post.title = f"{post.title} ({post.comments_count})"
     return render(request, "blog/index.html", {"page_obj": post_db})
 
 

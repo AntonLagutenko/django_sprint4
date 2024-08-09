@@ -54,32 +54,28 @@ class EditPostView(AuthorRequiredMixin, LoginRequiredMixin, UpdateView):
         return reverse('blog:post_detail', args=(self.object.pk,))
 
 
-class DeletePostView(DeleteView):
+class DeletePostView(LoginRequiredMixin, DeleteView):
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
 
     def get_object(self, queryset=None):
         post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-        if post.author != self.request.user and not self.request.user.is_staff:
+        if post.author != self.request.user:
             raise Http404("У вас нет прав на удаление этого поста")
         return post
 
-    def delete(self, request, *args, **kwargs):
-        try:
-            self.object = self.get_object()
-        except Http404:
-            return self.handle_no_permission()
-        return super().delete(request, *args, **kwargs)
-
-    def handle_no_permission(self):
-        return self.render_to_response(
-            {'error': 'Публикация не найдена или нет прав на её удаление'},
-            status=404)
-
     def get_success_url(self):
-        return reverse_lazy('blog:profile',
-                            kwargs={'username': self.request.user.username})
+        return reverse('blog:profile',
+                       kwargs={'username': self.request.user.username})
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            self.get_object()
+        except Http404:
+            return redirect('blog:post_detail',
+                            post_id=self.kwargs.get('post_id'))
+        return super().dispatch(request, *args, **kwargs)
 
 
 class EditProfileView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):

@@ -5,7 +5,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.timezone import now
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
@@ -62,6 +62,7 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
     def get_object(self, queryset=None):
         post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
         if post.author != self.request.user:
+
             raise Http404("У вас нет прав на удаление этого поста")
         return post
 
@@ -82,7 +83,6 @@ class EditProfileView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = User
     form_class = UserProfileForm
     template_name = 'blog/user.html'
-    success_url = reverse_lazy('blog:profile')
 
     def get_object(self):
         return get_object_or_404(User, username=self.kwargs.get('username'))
@@ -91,8 +91,8 @@ class EditProfileView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return self.request.user.username == self.kwargs.get('username')
 
     def get_success_url(self):
-        return reverse_lazy('blog:profile',
-                            kwargs={'username': self.request.user.username})
+        return reverse('blog:profile',
+                       kwargs={'username': self.request.user.username})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -187,8 +187,8 @@ class EditCommentView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
     def get_success_url(self):
         comment = self.get_object()
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': comment.post.pk})
+        return reverse('blog:post_detail',
+                       kwargs={'post_id': comment.post.pk})
 
     def get_object(self):
         comment_id = self.kwargs.get('comment_id')
@@ -214,7 +214,7 @@ class DeleteCommentView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def get_success_url(self):
         post_id = self.kwargs.get('post_id')
-        return reverse_lazy('blog:post_detail', kwargs={'post_id': post_id})
+        return reverse('blog:post_detail', kwargs={'post_id': post_id})
 
     def get_object(self):
         comment_id = self.kwargs.get('comment_id')
@@ -261,5 +261,5 @@ class AddCommentView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.post_obj.pk})
+        return reverse('blog:post_detail',
+                       kwargs={'post_id': self.post_obj.pk})

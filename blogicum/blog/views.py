@@ -30,7 +30,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse('blog:profile',
-                       args=(self.object.author.username,))
+                       kwargs={'username': self.request.user.username})
 
     def form_valid(self, form):
         form.instance.author = self.request.user
@@ -59,10 +59,7 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
     template_name = 'blog/create.html'
 
     def dispatch(self, request, *args, **kwargs):
-        try:
-            obj = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-        except Http404:
-            raise Http404("Публикация не найдена")
+        obj = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
         if obj.author != self.request.user:
             return HttpResponseRedirect(reverse('blog:post_detail',
                                                 kwargs={'post_id': obj.pk}))
@@ -73,16 +70,13 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
                        kwargs={'username': self.request.user.username})
 
 
-class EditProfileView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+class EditProfileView(LoginRequiredMixin, UpdateView):
     model = User
     form_class = UserProfileForm
     template_name = 'blog/user.html'
 
     def get_object(self):
-        return get_object_or_404(User, username=self.kwargs.get('username'))
-
-    def test_func(self):
-        return self.request.user.username == self.kwargs.get('username')
+        return self.request.user
 
     def get_success_url(self):
         return reverse('blog:profile',
@@ -107,19 +101,18 @@ class UserProfileView(PostListMixin, ListView):
     context_object_name = 'page_obj'
 
     def get_queryset(self):
-        username = self.kwargs.get('username')
-        author = get_object_or_404(User, username=username)
-        if self.request.user == author:
-            return super().get_queryset().filter(author=author)
+        self.author = get_object_or_404(User,
+                                        username=self.kwargs.get('username'))
+        if self.request.user == self.author:
+            return super().get_queryset().filter(author=self.author)
         else:
-            return super().get_queryset().filter(author=author,
+            return super().get_queryset().filter(author=self.author,
                                                  is_published=True,
                                                  pub_date__lte=timezone.now())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        username = self.kwargs.get('username')
-        context['profile'] = get_object_or_404(User, username=username)
+        context['profile'] = self.author
         return context
 
 

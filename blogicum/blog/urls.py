@@ -21,8 +21,8 @@ urlpatterns = [
          views.EditPostView.as_view(), name='edit_post'),
     path('posts/<int:post_id>/delete/',
          views.DeletePostView.as_view(), name='delete_post'),
+    path('profile/edit/',
+         views.EditProfileView.as_view(), name='edit_profile'),
     path('profile/<str:username>/',
          views.UserProfileView.as_view(), name='profile'),
-    path('profile/<str:username>/edit/',
-         views.EditProfileView.as_view(), name='edit_profile'),
 ]

@@ -5,7 +5,6 @@ from django.utils import timezone
 from constants.constants import (
     REPRESENTATION_LENGTH,
     MAX_FIELD_LENGTH,
-    MAX_COMMENT_LENGTH
 )
 
 User = get_user_model()

@@ -2,7 +2,7 @@ from constants.constants import AMOUNT_POSTS
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -58,16 +58,22 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
 
+    def get_success_url(self):
+        return reverse('blog:profile',
+                       kwargs={'username': self.request.user.username})
+
     def dispatch(self, request, *args, **kwargs):
-        obj = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
+        try:
+            obj = self.get_object()
+        except Http404:
+            if request.method == 'POST':
+                return HttpResponseNotFound('Пост не найден')
+            else:
+                raise Http404('Пост не найден')
         if obj.author != self.request.user:
             return HttpResponseRedirect(reverse('blog:post_detail',
                                                 kwargs={'post_id': obj.pk}))
         return super().dispatch(request, *args, **kwargs)
-
-    def get_success_url(self):
-        return reverse('blog:profile',
-                       kwargs={'username': self.request.user.username})
 
 
 class EditProfileView(LoginRequiredMixin, UpdateView):

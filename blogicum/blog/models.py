@@ -5,6 +5,7 @@ from django.utils import timezone
 from constants.constants import (
     REPRESENTATION_LENGTH,
     MAX_FIELD_LENGTH,
+    MAX_COMMENT_LENGTH
 )
 
 User = get_user_model()
@@ -104,7 +105,7 @@ class Comment(Publication):
         Post,
         on_delete=models.CASCADE,
         verbose_name='Комментируемый пост',
-        related_name='post_comments'
+        related_name='comments'
     )
     text = models.TextField(verbose_name='Текст комментария')
 
@@ -115,6 +116,6 @@ class Comment(Publication):
 
     def __str__(self) -> str:
         return (f'Комментарий автора {self.author.username}'
-                'к посту {self.post.title},'
-                'текст: {self.text[:MAX_COMMENT_LENGTH]}'
+                f'к посту {self.post.title},'
+                f'текст: {self.text[:MAX_COMMENT_LENGTH]}'
                 )

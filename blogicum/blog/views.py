@@ -1,26 +1,25 @@
-from constants.constants import AMOUNT_POSTS
+# Импорт модулей Django
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.http import Http404, HttpResponseRedirect, HttpResponseNotFound
-from django.shortcuts import render, get_object_or_404, redirect
+from django.http import Http404, HttpResponseNotFound, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.timezone import now
-from django.views.generic import CreateView, UpdateView, DeleteView, ListView
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .forms import (
-    CommentForm, PostForm, UserProfileForm
+    CommentForm,
+    PostForm,
+    UserProfileForm,
 )
+
+from .mixins import AuthorRequiredMixin, PostListMixin
+
 from .models import Category, Comment, Post, User
 
-
-class AuthorRequiredMixin:
-    def dispatch(self, request, *args, **kwargs):
-        post = self.get_object()
-        if post.author != request.user:
-            return redirect('blog:post_detail', post_id=post.pk)
-        return super().dispatch(request, *args, **kwargs)
+from constants.constants import AMOUNT_POSTS
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -37,23 +36,17 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class EditPostView(AuthorRequiredMixin, LoginRequiredMixin, UpdateView):
+class EditPostView(LoginRequiredMixin, AuthorRequiredMixin, UpdateView):
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
     template_name = 'blog/create.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        post = self.get_object()
-        if post.author != request.user:
-            return redirect('blog:post_detail', post_id=post.pk)
-        return super().dispatch(request, *args, **kwargs)
-
     def get_success_url(self):
         return reverse('blog:post_detail', args=(self.object.pk,))
 
 
-class DeletePostView(LoginRequiredMixin, DeleteView):
+class DeletePostView(LoginRequiredMixin, AuthorRequiredMixin, DeleteView):
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
@@ -94,14 +87,6 @@ class EditProfileView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class PostListMixin:
-    paginate_by = AMOUNT_POSTS
-
-    def get_queryset(self):
-        return Post.objects.annotate(
-            comment_count=Count('post_comments')).order_by('-pub_date')
-
-
 class UserProfileView(PostListMixin, ListView):
     template_name = 'blog/profile.html'
     context_object_name = 'page_obj'
@@ -132,7 +117,7 @@ def get_published_posts():
 
 def index(request):
     post_db = get_published_posts().annotate(
-        comments_count=Count('post_comments')
+        comments_count=Count('comments')
     ).order_by('-pub_date')
     paginator = Paginator(post_db, AMOUNT_POSTS)
     page_number = request.GET.get('page')
@@ -148,7 +133,7 @@ def post_detail(request, post_id):
             or not post.category.is_published
             or post.pub_date > timezone.now()) and post.author != request.user:
         raise Http404("Post not found")
-    comments = post.post_comments.all().order_by('created_at')
+    comments = post.comments.all().order_by('created_at')
     form = CommentForm()
     context = {
         'post': post,
@@ -162,7 +147,7 @@ def category_posts(request, category_slug):
     category = get_object_or_404(
         Category, slug=category_slug, is_published=True)
     post_list = get_published_posts().filter(category=category).annotate(
-        comments_count=Count('post_comments')
+        comments_count=Count('comments')
     ).order_by('-pub_date')
     paginator = Paginator(post_list, AMOUNT_POSTS)
     page = request.GET.get('page')

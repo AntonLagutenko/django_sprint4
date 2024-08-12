@@ -1,12 +1,10 @@
 # Импорт модулей Django
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import Http404, HttpResponseNotFound, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.timezone import now
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .forms import (
@@ -16,10 +14,9 @@ from .forms import (
 )
 
 from .mixins import AuthorRequiredMixin, PostListMixin
+from .service import get_published_posts, paginate_posts
 
 from .models import Category, Comment, Post, User
-
-from constants.constants import AMOUNT_POSTS
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -95,11 +92,16 @@ class UserProfileView(PostListMixin, ListView):
         self.author = get_object_or_404(User,
                                         username=self.kwargs.get('username'))
         if self.request.user == self.author:
-            return super().get_queryset().filter(author=self.author)
+            return super().get_queryset().select_related('author').filter(
+                author=self.author
+            )
         else:
-            return super().get_queryset().filter(author=self.author,
-                                                 is_published=True,
-                                                 pub_date__lte=timezone.now())
+            return super().get_queryset().select_related('author').filter(
+                author=self.author,
+                is_published=True,
+                pub_date__lte=timezone.now(),
+                category__is_published=True
+            )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -107,28 +109,19 @@ class UserProfileView(PostListMixin, ListView):
         return context
 
 
-def get_published_posts():
-    return Post.objects.select_related(
-        "author", "category", "location"
-    ).filter(
-        is_published=True, pub_date__lt=now(), category__is_published=True
-    )
-
-
 def index(request):
     post_db = get_published_posts().annotate(
         comments_count=Count('comments')
     ).order_by('-pub_date')
-    paginator = Paginator(post_db, AMOUNT_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginate_posts(request, post_db)
     for post in page_obj:
         post.title = f"{post.title} ({post.comments_count})"
     return render(request, "blog/index.html", {"page_obj": page_obj})
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
+    post = get_object_or_404(Post.objects.select_related('author', 'category'),
+                             id=post_id)
     if (not post.is_published
             or not post.category.is_published
             or post.pub_date > timezone.now()) and post.author != request.user:
@@ -149,9 +142,7 @@ def category_posts(request, category_slug):
     post_list = get_published_posts().filter(category=category).annotate(
         comments_count=Count('comments')
     ).order_by('-pub_date')
-    paginator = Paginator(post_list, AMOUNT_POSTS)
-    page = request.GET.get('page')
-    page_obj = paginator.get_page(page)
+    page_obj = paginate_posts(request, post_list)
     return render(request,
                   "blog/category.html",
                   {"category": category, "page_obj": page_obj})

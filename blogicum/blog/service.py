@@ -1,6 +1,7 @@
-from django.utils.timezone import now
-from .models import Post
 from django.core.paginator import Paginator
+from django.utils.timezone import now
+
+from .models import Post
 
 from constants.constants import AMOUNT_POSTS
 

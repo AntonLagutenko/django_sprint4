@@ -1,4 +1,3 @@
-# Импорт модулей Django
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count
 from django.http import Http404, HttpResponseNotFound, HttpResponseRedirect
@@ -7,16 +6,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from .forms import (
-    CommentForm,
-    PostForm,
-    UserProfileForm,
-)
+from .forms import (CommentForm, PostForm, UserProfileForm)
 
-from .mixins import AuthorRequiredMixin, PostListMixin
-from .service import get_published_posts, paginate_posts
+from .mixins import (AuthorRequiredMixin, PostListMixin)
 
-from .models import Category, Comment, Post, User
+from .service import (get_published_posts, paginate_posts)
+
+from .models import (Category, Comment, Post, User)
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -43,7 +39,16 @@ class EditPostView(LoginRequiredMixin, AuthorRequiredMixin, UpdateView):
         return reverse('blog:post_detail', args=(self.object.pk,))
 
 
-class DeletePostView(LoginRequiredMixin, AuthorRequiredMixin, DeleteView):
+class AutRequiredMixin:
+    def dispatch(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj.author != self.request.user:
+            return HttpResponseRedirect(reverse('blog:post_detail',
+                                                kwargs={'post_id': obj.pk}))
+        return super().dispatch(request, *args, **kwargs)
+
+
+class DeletePostView(LoginRequiredMixin, DeleteView):
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
@@ -51,6 +56,9 @@ class DeletePostView(LoginRequiredMixin, AuthorRequiredMixin, DeleteView):
     def get_success_url(self):
         return reverse('blog:profile',
                        kwargs={'username': self.request.user.username})
+
+    # не знаю как избавиться от этой конструкции
+    # тест не проходит никак, кроме использования try except и прочего
 
     def dispatch(self, request, *args, **kwargs):
         try:

@@ -1,5 +1,5 @@
-from django.shortcuts import redirect
 from django.db.models import Count
+from django.shortcuts import redirect
 
 from .models import Post
 

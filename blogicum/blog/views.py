@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count
 from django.http import Http404, HttpResponseNotFound, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -57,20 +57,22 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
         return reverse('blog:profile',
                        kwargs={'username': self.request.user.username})
 
-    # не знаю как избавиться от этой конструкции
-    # тест не проходит никак, кроме использования try except и прочего
+    # post_test не проходит никак,
+    # кроме использования подобных конструкций и прочего.
+    # смог только так пройти, но это не удовлетворяет требованиям ревью.
+    # насколько понял, проблема из-за метода POST в тесте, а код работает с GET
 
     def dispatch(self, request, *args, **kwargs):
-        try:
-            obj = self.get_object()
-        except Http404:
+        queryset = self.get_queryset()
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        obj = queryset.filter(pk=pk).first()
+        if obj is None:
             if request.method == 'POST':
                 return HttpResponseNotFound('Пост не найден')
             else:
                 raise Http404('Пост не найден')
         if obj.author != self.request.user:
-            return HttpResponseRedirect(reverse('blog:post_detail',
-                                                kwargs={'post_id': obj.pk}))
+            return redirect('blog:post_detail', post_id=obj.pk)
         return super().dispatch(request, *args, **kwargs)
 
 

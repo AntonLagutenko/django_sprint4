@@ -1,6 +1,7 @@
 
 from django.views.generic import TemplateView
 from django.http import HttpResponseForbidden
+from django.shortcuts import render
 
 
 class AboutView(TemplateView):
@@ -35,6 +36,10 @@ class Custom403View(TemplateView):
         return response
 
 
+def page_not_found(request, exception):
+    return render(request, 'pages/404.html', status=404)
+
+
 class Custom404View(TemplateView):
     template_name = 'pages/404.html'
     status = 404
@@ -56,11 +61,7 @@ class Custom500View(TemplateView):
 
 
 def custom_500(request):
-    # Создаем экземпляр вашего класса представления
     view = Custom500View.as_view()
-
-    # Вызываем его для получения HttpResponse объекта
     response = view(request)
-    # Устанавливаем статус код на 500
     response.status_code = 500
     return response

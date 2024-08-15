@@ -1,18 +1,15 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count
-from django.http import Http404, HttpResponseNotFound, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render, redirect
+from django.http import Http404
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .forms import (CommentForm, PostForm, UserProfileForm)
-
-from .mixins import (AuthorRequiredMixin, PostListMixin)
-
-from .service import (get_published_posts, paginate_posts)
-
+from .mixins import (AutRequiredMixin, AuthorRequiredMixin, PostListMixin)
 from .models import (Category, Comment, Post, User)
+from .service import (get_published_posts, paginate_posts)
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -39,16 +36,7 @@ class EditPostView(LoginRequiredMixin, AuthorRequiredMixin, UpdateView):
         return reverse('blog:post_detail', args=(self.object.pk,))
 
 
-class AutRequiredMixin:
-    def dispatch(self, request, *args, **kwargs):
-        obj = self.get_object()
-        if obj.author != self.request.user:
-            return HttpResponseRedirect(reverse('blog:post_detail',
-                                                kwargs={'post_id': obj.pk}))
-        return super().dispatch(request, *args, **kwargs)
-
-
-class DeletePostView(LoginRequiredMixin, DeleteView):
+class DeletePostView(LoginRequiredMixin, AutRequiredMixin, DeleteView):
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
@@ -56,26 +44,6 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
     def get_success_url(self):
         return reverse('blog:profile',
                        kwargs={'username': self.request.user.username})
-
-    # post_test не проходит никак,
-    # кроме использования подобных конструкций и прочего.
-    # смог только так пройти, но это не удовлетворяет требованиям ревью.
-    # насколько понял, проблема из-за метода POST в тесте, а код работает с GET
-    # прошу подсказку/совет/помощи. Больше месяца с этим, один раз перевелся
-    # Этот проект вызывает один негатив, сроки горят снова
-
-    def dispatch(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        pk = self.kwargs.get(self.pk_url_kwarg)
-        obj = queryset.filter(pk=pk).first()
-        if obj is None:
-            if request.method == 'POST':
-                return HttpResponseNotFound('Пост не найден')
-            else:
-                raise Http404('Пост не найден')
-        if obj.author != self.request.user:
-            return redirect('blog:post_detail', post_id=obj.pk)
-        return super().dispatch(request, *args, **kwargs)
 
 
 class EditProfileView(LoginRequiredMixin, UpdateView):
@@ -90,11 +58,6 @@ class EditProfileView(LoginRequiredMixin, UpdateView):
         return reverse('blog:profile',
                        kwargs={'username': self.request.user.username})
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['profile'] = self.get_object()
-        return context
-
 
 class UserProfileView(PostListMixin, ListView):
     template_name = 'blog/profile.html'
@@ -104,16 +67,19 @@ class UserProfileView(PostListMixin, ListView):
         self.author = get_object_or_404(User,
                                         username=self.kwargs.get('username'))
         if self.request.user == self.author:
-            return super().get_queryset().select_related('author').filter(
+            return super().get_queryset().select_related('author',
+                                                         'category',
+                                                         'location').filter(
                 author=self.author
             )
-        else:
-            return super().get_queryset().select_related('author').filter(
-                author=self.author,
-                is_published=True,
-                pub_date__lte=timezone.now(),
-                category__is_published=True
-            )
+        return super().get_queryset().select_related('author',
+                                                     'category',
+                                                     'location').filter(
+            author=self.author,
+            is_published=True,
+            pub_date__lte=timezone.now(),
+            category__is_published=True
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -126,8 +92,6 @@ def index(request):
         comments_count=Count('comments')
     ).order_by('-pub_date')
     page_obj = paginate_posts(request, post_db)
-    for post in page_obj:
-        post.title = f"{post.title} ({post.comments_count})"
     return render(request, "blog/index.html", {"page_obj": page_obj})
 
 
@@ -196,10 +160,7 @@ class AddCommentView(LoginRequiredMixin, CreateView):
     template_name = 'blog/comment.html'
 
     def form_valid(self, form):
-        try:
-            post_obj = Post.objects.get(pk=self.kwargs.get('post_id'))
-        except Post.DoesNotExist:
-            return render(self.request, 'pages/404.html', status=404)
+        post_obj = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
         form.instance.post = post_obj
         form.instance.author = self.request.user
         return super().form_valid(form)

@@ -26,7 +26,9 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class EditPostView(LoginRequiredMixin, AuthorRequiredMixin, UpdateView):
+class EditPostView(LoginRequiredMixin,
+                   AuthorRequiredMixin,
+                   UpdateView):
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
